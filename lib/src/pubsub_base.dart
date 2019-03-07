@@ -35,7 +35,7 @@ Future<Object> call(String to, Object data,
   Timer tout;
 
   var sub = Subscriber();
-  sub.setCb((msg) {
+  sub.stream.listen((msg) {
     if (!completer.isCompleted) {
       if (msg.data is Exception) {
         completer.completeError(msg.data);
@@ -43,7 +43,7 @@ Future<Object> call(String to, Object data,
         completer.complete(msg.data);
       }
     }
-    sub.unsubscribeAll();
+    sub.close();
     tout?.cancel();
   });
 
@@ -67,26 +67,30 @@ typedef MsgCb = void Function(Message msg);
 
 /// Subscriber can be subscribed to subscription paths
 class Subscriber {
-  MsgCb _msgCb;
+  bool _closed = false;
   StreamController<Message> _stc;
   final _localSubs = Set<String>();
-
-  Subscriber([MsgCb cb]) {
-    _msgCb = cb;
-  }
 
   Stream<Message> get stream {
     if (_stc == null) {
       _stc = StreamController();
+      _stc.onCancel = () {
+        close();
+      };
     }
     return _stc.stream;
   }
 
-  void setCb(MsgCb cb) {
-    _msgCb = cb;
+  void close() {
+    if (!_closed) {
+      _closed = true;
+      unsubscribeAll();
+      _stc?.close();
+    }
   }
 
   bool subscribe(String path) {
+    if (_closed) throw Exception("Subscribe on closed Subscriber");
     var ret =
         _subscriptions.putIfAbsent(path, () => Set<Subscriber>()).add(this);
     _localSubs.add(path);
@@ -115,6 +119,7 @@ class Subscriber {
   }
 
   void unsubscribeMany(List<String> paths) {
+    if (_closed) throw Exception("Unsubscribe on closed Subscriber");
     for (var path in paths) {
       unsubscribe(path);
     }
@@ -127,11 +132,7 @@ class Subscriber {
   }
 
   void _send(Message msg) {
-    if (_msgCb != null) {
-      _msgCb(msg);
-    }
-
-    if (_stc != null) {
+    if (!_closed && _stc != null) {
       _stc.add((msg));
     }
   }
