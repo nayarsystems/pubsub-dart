@@ -1,44 +1,26 @@
 import 'dart:async';
 
-class PubSub {
-  static final _subscriptions = Map<String, Set<Subscriber>>();
-  static final _sticky = Map<String, Message>();
+final _subscriptions = Map<String, Set<Subscriber>>();
+final _sticky = Map<String, Message>();
 
-  static bool _addSubscription(String path, Subscriber sub) {
-    return _subscriptions.putIfAbsent(path, () => Set<Subscriber>()).add(sub);
+int publish(Message msg, {bool sticky = false, bool propagate = true}) {
+  var touch = 0;
+  if (sticky) {
+    _sticky[msg.to] = msg.clone(isSticky: true);
   }
-
-  static bool _delSubscription(String path, Subscriber sub) {
-    var ret = false;
+  var chunks = msg.to.split('.');
+  while (chunks.isNotEmpty) {
+    var path = chunks.join('.');
     if (_subscriptions.containsKey(path)) {
-      ret = _subscriptions[path].remove(sub);
-      if (_subscriptions[path].isEmpty) {
-        _subscriptions.remove(path);
+      for (var sub in _subscriptions[path].toList()) {
+        sub._send(msg);
+        touch++;
       }
     }
-    return ret;
+    if (!propagate) break;
+    chunks.removeLast();
   }
-
-  static int publish(Message msg,
-      {bool sticky = false, bool propagate = true}) {
-    var touch = 0;
-    if (sticky) {
-      _sticky[msg.to] = msg.clone(isSticky: true);
-    }
-    var chunks = msg.to.split('.');
-    while (chunks.isNotEmpty) {
-      var path = chunks.join('.');
-      if (_subscriptions.containsKey(path)) {
-        for (var sub in _subscriptions[path].toList()) {
-          sub._send(msg);
-          touch++;
-        }
-      }
-      if (!propagate) break;
-      chunks.removeLast();
-    }
-    return touch;
-  }
+  return touch;
 }
 
 typedef MsgCb = void Function(Message msg);
@@ -47,7 +29,7 @@ typedef MsgCb = void Function(Message msg);
 class Subscriber {
   MsgCb _msgCb;
   StreamController _stc;
-  final _subscriptions = Set<String>();
+  final _localSubs = Set<String>();
 
   Subscriber([MsgCb cb]) {
     _msgCb = cb;
@@ -61,12 +43,11 @@ class Subscriber {
   }
 
   bool subscribe(String path) {
-    var ret = PubSub._addSubscription(path, this);
-    if (ret) {
-      _subscriptions.add(path);
-    }
-    if (PubSub._sticky.containsKey(path)) {
-      _send(PubSub._sticky[path]);
+    var ret =
+        _subscriptions.putIfAbsent(path, () => Set<Subscriber>()).add(this);
+    _localSubs.add(path);
+    if (_sticky.containsKey(path)) {
+      _send(_sticky[path]);
     }
     return ret;
   }
@@ -78,9 +59,13 @@ class Subscriber {
   }
 
   bool unsubscribe(String path) {
-    var ret = PubSub._delSubscription(path, this);
-    if (ret) {
-      _subscriptions.remove(path);
+    var ret = false;
+    if (_subscriptions.containsKey(path)) {
+      ret = _subscriptions[path].remove(this);
+      if (_subscriptions[path].isEmpty) {
+        _subscriptions.remove(path);
+      }
+      _localSubs.remove(path);
     }
     return ret;
   }
@@ -92,7 +77,7 @@ class Subscriber {
   }
 
   void unsubscribeAll() {
-    for (var path in _subscriptions.toList()) {
+    for (var path in _localSubs.toList()) {
       unsubscribe(path);
     }
   }
@@ -115,7 +100,7 @@ class Message {
   final Object data;
   final bool sticky;
 
-  Message({this.to, this.resp = '', this.data, this.sticky = false})
+  Message({this.to, this.resp, this.data, this.sticky = false})
       : creation = DateTime.now();
 
   Message clone({bool isSticky}) {
