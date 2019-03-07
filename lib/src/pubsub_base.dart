@@ -2,6 +2,7 @@ import 'dart:async';
 
 final _subscriptions = Map<String, Set<Subscriber>>();
 final _sticky = Map<String, Message>();
+var _atomic = 0;
 
 int publish(Message msg, {bool sticky = false, bool propagate = true}) {
   var touch = 0;
@@ -23,12 +24,51 @@ int publish(Message msg, {bool sticky = false, bool propagate = true}) {
   return touch;
 }
 
+Future<Object> call(String to, Object data,
+    {String resp,
+    bool sticky = false,
+    bool propagate = false,
+    Duration timeout}) {
+  var rpath = resp ?? '#resp.${++_atomic}';
+  var msg = Message(to: to, resp: rpath, data: data);
+  var completer = Completer<Object>();
+  Timer tout;
+
+  var sub = Subscriber();
+  sub.setCb((msg) {
+    if (!completer.isCompleted) {
+      if (msg.data is Exception) {
+        completer.completeError(msg.data);
+      } else {
+        completer.complete(msg.data);
+      }
+    }
+    sub.unsubscribeAll();
+    tout?.cancel();
+  });
+
+  sub.subscribe(rpath);
+
+  if (timeout != null) {
+    tout = Timer(timeout, () {
+      if (!completer.isCompleted) {
+        completer.completeError(TimeoutException("PubSub call timeout"));
+        sub.unsubscribeAll();
+      }
+    });
+  }
+
+  publish(msg, sticky: sticky, propagate: propagate);
+
+  return completer.future;
+}
+
 typedef MsgCb = void Function(Message msg);
 
 /// Subscriber can be subscribed to subscription paths
 class Subscriber {
   MsgCb _msgCb;
-  StreamController _stc;
+  StreamController<Message> _stc;
   final _localSubs = Set<String>();
 
   Subscriber([MsgCb cb]) {
@@ -40,6 +80,10 @@ class Subscriber {
       _stc = StreamController();
     }
     return _stc.stream;
+  }
+
+  void setCb(MsgCb cb) {
+    _msgCb = cb;
   }
 
   bool subscribe(String path) {
@@ -105,5 +149,11 @@ class Message {
 
   Message clone({bool isSticky}) {
     return Message(to: to, resp: resp, data: data, sticky: isSticky ?? sticky);
+  }
+
+  void respond(Object data) {
+    if (resp != null) {
+      publish(Message(to: resp, data: data), propagate: false);
+    }
   }
 }

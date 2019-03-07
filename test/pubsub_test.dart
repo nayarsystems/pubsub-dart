@@ -1,7 +1,8 @@
+import 'dart:async';
 import 'package:pubsub/pubsub.dart';
 import 'package:test/test.dart';
 
-void main() {
+main() {
   group('Subscriber test', () {
     Subscriber subA;
     Subscriber subB;
@@ -103,6 +104,46 @@ void main() {
       expect(msg2.sticky, false);
       var msg3 = msg2.clone(isSticky: true);
       expect(msg3.sticky, true);
+    });
+
+    test("Subscriber stream", () async {
+      expect(subA.subscribe("sota"), true);
+      var stream = subA.stream;
+      expect(publish(Message(to: "sota", data: 1)), 1);
+      expect(publish(Message(to: "sota", data: 2)), 1);
+      var list = await stream.take(2).toList();
+      expect(list[0].data, 1);
+      expect(list[1].data, 2);
+    });
+
+    test("Async call", () async {
+      subA.setCb((msg) {
+        switch (msg.data) {
+          case 1:
+            msg.respond("Hello");
+            break;
+          case 2:
+            msg.respond(Exception("Boom!!"));
+            break;
+        }
+      });
+
+      subA.subscribe("say.hello");
+      expect(await call("say.hello", 1), "Hello");
+      try {
+        await call("say.hello", 2);
+        fail("Exception expected");
+      } catch (e) {
+        expect(e.toString(), contains("Boom!!"));
+      }
+
+      try {
+        await call("say.bay", null, timeout: Duration(milliseconds: 5));
+        fail("Timeout exception expected");
+      } catch (e) {
+        expect(e is TimeoutException, true,
+            reason: "Expected TimeoutException");
+      }
     });
   });
 }
