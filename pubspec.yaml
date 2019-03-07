@@ -1,4 +1,4 @@
-name: pubsub
+name: ps
 description: Lightweight Publish/Subscribe library.
 version: 1.0.0
 homepage: https://github.com/nayarsystems/pubsub-dart

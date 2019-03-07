@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:pubsub/pubsub.dart';
+import 'package:ps/ps.dart';
 import 'package:test/test.dart';
 
 main() {
