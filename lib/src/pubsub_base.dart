@@ -10,10 +10,16 @@ int publish(Message msg, {bool sticky = false, bool propagate = true}) {
     _sticky[msg.to] = msg._cloneSticky();
   }
   var chunks = msg.to.split('.');
+  var first = true;
   while (chunks.isNotEmpty) {
-    var path = chunks.join('.');
-    if (_subscriptions.containsKey(path)) {
-      for (var sub in _subscriptions[path]) {
+    var topic = chunks.join('.');
+    if (first) {
+      first = false;
+    } else {
+      topic += ".*";
+    }
+    if (_subscriptions.containsKey(topic)) {
+      for (var sub in _subscriptions[topic]) {
         sub._send(msg);
         touch++;
       }

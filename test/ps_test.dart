@@ -35,7 +35,7 @@ main() {
 
     test("Single subscription test", () async {
       subA.stream.listen(msgCbA);
-      expect(subA.subscribe("sota"), true);
+      subA.subscribeMany(["sota", "sota.*"]);
       publish(Message(to: "sota", data: "Hello"));
       await contextSwitch();
       expect(messagesA.length, 1);
@@ -100,7 +100,7 @@ main() {
     test("Parents propagate test", () async {
       subA.stream.listen(msgCbA);
       subB.stream.listen(msgCbB);
-      expect(subA.subscribe("sota"), true);
+      expect(subA.subscribe("sota.*"), true);
       expect(subB.subscribe("sota.caballo"), true);
       expect(
           publish(Message(to: "sota.caballo", data: "Hello"), propagate: false),
