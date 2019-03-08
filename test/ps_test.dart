@@ -123,21 +123,15 @@ main() {
       expect(messagesA[0].sticky, true);
     });
 
-    test("Message clone", () {
-      var msg1 = Message(to: "sota");
-      var msg2 = msg1.clone();
-      expect(msg2.sticky, false);
-      var msg3 = msg2.clone(isSticky: true);
-      expect(msg3.sticky, true);
-    });
-
     test("Subscriber stream", () async {
-      var stream = Subscriber(["sota"]).stream;
+      var sub = Subscriber(["sota"]);
+      var stream = sub.stream;
       expect(publish(Message(to: "sota", data: 1)), 1);
       expect(publish(Message(to: "sota", data: 2)), 1);
       var list = await stream.take(2).toList();
       expect(list[0].data, 1);
       expect(list[1].data, 2);
+      expect(sub.closed, true);
     });
 
     test("Async call", () async {
@@ -160,7 +154,6 @@ main() {
       } catch (e) {
         expect(e.toString(), contains("Boom!!"));
       }
-
       try {
         await call("say.bay", null, timeout: Duration(milliseconds: 5));
         fail("Timeout exception expected");

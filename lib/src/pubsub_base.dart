@@ -7,7 +7,7 @@ var _atomic = 0;
 int publish(Message msg, {bool sticky = false, bool propagate = true}) {
   var touch = 0;
   if (sticky) {
-    _sticky[msg.to] = msg.clone(isSticky: true);
+    _sticky[msg.to] = msg._cloneSticky();
   }
   var chunks = msg.to.split('.');
   while (chunks.isNotEmpty) {
@@ -28,39 +28,24 @@ Future<Object> call(String to, Object data,
     {String resp,
     bool sticky = false,
     bool propagate = false,
-    Duration timeout}) {
+    Duration timeout}) async {
   var rpath = resp ?? '#resp.${++_atomic}';
   var msg = Message(to: to, resp: rpath, data: data);
-  var completer = Completer<Object>();
-  Timer tout;
 
-  var sub = Subscriber();
-  sub.stream.listen((msg) {
-    if (!completer.isCompleted) {
-      if (msg.data is Exception) {
-        completer.completeError(msg.data);
-      } else {
-        completer.complete(msg.data);
-      }
-    }
-    sub.close();
-    tout?.cancel();
-  });
-
-  sub.subscribe(rpath);
-
-  if (timeout != null) {
-    tout = Timer(timeout, () {
-      if (!completer.isCompleted) {
-        completer.completeError(TimeoutException("PubSub call timeout"));
-        sub.unsubscribeAll();
-      }
-    });
-  }
-
+  var stream = Subscriber([rpath]).stream;
   publish(msg, sticky: sticky, propagate: propagate);
+  Message ret;
+  if (timeout == null) {
+    ret = await stream.first;
+  } else {
+    ret = await stream.first.timeout(timeout);
+  }
+  if (ret.data is Exception) throw (ret.data);
+  return ret.data;
+}
 
-  return completer.future;
+Subscriber subscribe([List<String> topics]) {
+  return Subscriber(topics);
 }
 
 typedef MsgCb = void Function(Message msg);
@@ -153,11 +138,14 @@ class Message {
   final Object data;
   final bool sticky;
 
-  Message({this.to, this.resp, this.data, this.sticky = false})
+  Message._full({this.to, this.resp, this.data, this.sticky})
       : creation = DateTime.now();
 
-  Message clone({bool isSticky}) {
-    return Message(to: to, resp: resp, data: data, sticky: isSticky ?? sticky);
+  Message({String to, String resp, Object data})
+      : this._full(to: to, resp: resp, data: data, sticky: false);
+
+  Message _cloneSticky() {
+    return Message._full(to: to, resp: resp, data: data, sticky: true);
   }
 
   void respond(Object data) {
