@@ -144,8 +144,8 @@ class Message<T> {
   Message({String to, String resp, T data})
       : this._full(to: to, resp: resp, data: data, sticky: false);
 
-  Message _cloneSticky() {
-    return Message._full(to: to, resp: resp, data: data, sticky: true);
+  Message<T> _cloneSticky() {
+    return Message<T>._full(to: to, resp: resp, data: data, sticky: true);
   }
 
   void respond(Object data) {
