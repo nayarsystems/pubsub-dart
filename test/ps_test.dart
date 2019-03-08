@@ -116,8 +116,8 @@ main() {
 
     test("Sticky messages test", () async {
       subA.stream.listen(msgCbA);
-      publish(Message(to: "sota", data: "Hello"), sticky: true);
-      subA.subscribe("sota");
+      publish(Message(to: "__sticky__", data: "Hello"), sticky: true);
+      subA.subscribe("__sticky__");
       await contextSwitch();
       expect(messagesA.length, 1);
       expect(messagesA[0].sticky, true);
@@ -132,8 +132,7 @@ main() {
     });
 
     test("Subscriber stream", () async {
-      expect(subA.subscribe("sota"), true);
-      var stream = subA.stream;
+      var stream = Subscriber(["sota"]).stream;
       expect(publish(Message(to: "sota", data: 1)), 1);
       expect(publish(Message(to: "sota", data: 2)), 1);
       var list = await stream.take(2).toList();

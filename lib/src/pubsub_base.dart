@@ -13,7 +13,7 @@ int publish(Message msg, {bool sticky = false, bool propagate = true}) {
   while (chunks.isNotEmpty) {
     var path = chunks.join('.');
     if (_subscriptions.containsKey(path)) {
-      for (var sub in _subscriptions[path].toList()) {
+      for (var sub in _subscriptions[path]) {
         sub._send(msg);
         touch++;
       }
@@ -71,14 +71,22 @@ class Subscriber {
   StreamController<Message> _stc;
   final _localSubs = Set<String>();
 
-  Stream<Message> get stream {
-    if (_stc == null) {
-      _stc = StreamController();
-      _stc.onCancel = () {
-        close();
-      };
+  Subscriber([List<String> topics]) {
+    _stc = StreamController();
+    _stc.onCancel = () {
+      close();
+    };
+    if (topics != null) {
+      subscribeMany(topics);
     }
+  }
+
+  Stream<Message> get stream {
     return _stc.stream;
+  }
+
+  bool get closed {
+    return _closed;
   }
 
   void close() {
@@ -89,45 +97,45 @@ class Subscriber {
     }
   }
 
-  bool subscribe(String path) {
+  bool subscribe(String topic) {
     if (_closed) throw Exception("Subscribe on closed Subscriber");
     var ret =
-        _subscriptions.putIfAbsent(path, () => Set<Subscriber>()).add(this);
-    _localSubs.add(path);
-    if (_sticky.containsKey(path)) {
-      _send(_sticky[path]);
+        _subscriptions.putIfAbsent(topic, () => Set<Subscriber>()).add(this);
+    _localSubs.add(topic);
+    if (_sticky.containsKey(topic)) {
+      _send(_sticky[topic]);
     }
     return ret;
   }
 
-  void subscribeMany(List<String> paths) {
-    for (var path in paths) {
-      subscribe(path);
+  void subscribeMany(List<String> topics) {
+    for (var topic in topics) {
+      subscribe(topic);
     }
   }
 
-  bool unsubscribe(String path) {
+  bool unsubscribe(String topic) {
     var ret = false;
-    if (_subscriptions.containsKey(path)) {
-      ret = _subscriptions[path].remove(this);
-      if (_subscriptions[path].isEmpty) {
-        _subscriptions.remove(path);
+    if (_subscriptions.containsKey(topic)) {
+      ret = _subscriptions[topic].remove(this);
+      if (_subscriptions[topic].isEmpty) {
+        _subscriptions.remove(topic);
       }
-      _localSubs.remove(path);
+      _localSubs.remove(topic);
     }
     return ret;
   }
 
-  void unsubscribeMany(List<String> paths) {
+  void unsubscribeMany(List<String> topics) {
     if (_closed) throw Exception("Unsubscribe on closed Subscriber");
-    for (var path in paths) {
-      unsubscribe(path);
+    for (var topic in topics) {
+      unsubscribe(topic);
     }
   }
 
   void unsubscribeAll() {
-    for (var path in _localSubs.toList()) {
-      unsubscribe(path);
+    for (var topic in _localSubs.toList()) {
+      unsubscribe(topic);
     }
   }
 
