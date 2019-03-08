@@ -149,10 +149,10 @@ main() {
       subA.stream.listen((msg) {
         switch (msg.data) {
           case 1:
-            msg.respond("Hello");
+            msg.answer("Hello");
             break;
           case 2:
-            msg.respond(Exception("Boom!!"));
+            msg.answer(Exception("Boom!!"));
             break;
         }
       });

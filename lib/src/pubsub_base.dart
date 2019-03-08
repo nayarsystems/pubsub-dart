@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:meta/meta.dart';
+
 final _subscriptions = Map<String, Set<Subscriber>>();
 final _sticky = Map<String, Message>();
 var _atomic = 0;
@@ -137,24 +139,42 @@ class Subscriber<T> {
   }
 }
 
+/// Represents a message that can be published in a topic.
 class Message<T> {
+  ///  Target topic.
   final String to;
+
+  /// Response topic (Optional).
   final String resp;
+
+  /// Creation time
   final DateTime creation;
+
+  /// Message data.
   final T data;
+
+  /// Sticky messages remain in memory and are delivered when a subscriber
+  /// subscribes to the topic to which the sticky message was previously delivered.
+  /// You can check if a message is recent or old by looking at the state of this flag.
   final bool sticky;
 
   Message._full({this.to, this.resp, this.data, this.sticky})
       : creation = DateTime.now();
 
-  Message({String to, String resp, T data})
+  /// Constructs a new [Message] instance.
+  /// [to] is the target topic.
+  /// [data] is the message data.
+  /// [resp] is the optional response topic.
+  Message({@required String to, @required T data, String resp})
       : this._full(to: to, resp: resp, data: data, sticky: false);
 
   Message<T> _cloneSticky() {
     return Message<T>._full(to: to, resp: resp, data: data, sticky: true);
   }
 
-  void respond(Object data) {
+  /// create and publish a [Message] in response to this one.
+  /// This message must have a non-null [resp] field.
+  void answer(Object data) {
     if (resp != null) {
       publish(Message(to: resp, data: data), propagate: false);
     }
