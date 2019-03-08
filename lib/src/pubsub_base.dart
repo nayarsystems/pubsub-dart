@@ -44,16 +44,16 @@ Future<Object> call(String to, Object data,
   return ret.data;
 }
 
-Subscriber subscribe([List<String> topics]) {
-  return Subscriber(topics);
+Subscriber<T> subscribe<T>([List<String> topics]) {
+  return Subscriber<T>(topics);
 }
 
 typedef MsgCb = void Function(Message msg);
 
 /// Subscriber can be subscribed to subscription paths
-class Subscriber {
+class Subscriber<T> {
   bool _closed = false;
-  StreamController<Message> _stc;
+  StreamController<Message<T>> _stc;
   final _localSubs = Set<String>();
 
   Subscriber([List<String> topics]) {
@@ -66,7 +66,7 @@ class Subscriber {
     }
   }
 
-  Stream<Message> get stream {
+  Stream<Message<T>> get stream {
     return _stc.stream;
   }
 
@@ -131,17 +131,17 @@ class Subscriber {
   }
 }
 
-class Message {
+class Message<T> {
   final String to;
   final String resp;
   final DateTime creation;
-  final Object data;
+  final T data;
   final bool sticky;
 
   Message._full({this.to, this.resp, this.data, this.sticky})
       : creation = DateTime.now();
 
-  Message({String to, String resp, Object data})
+  Message({String to, String resp, T data})
       : this._full(to: to, resp: resp, data: data, sticky: false);
 
   Message _cloneSticky() {

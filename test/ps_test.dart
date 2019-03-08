@@ -134,6 +134,17 @@ main() {
       expect(sub.closed, true);
     });
 
+    test("Subscribe using generics", () async {
+      var sub = subscribe<String>(["sota"]);
+      var stream = sub.stream;
+      expect(publish(Message<String>(to: "sota", data: "Hola")), 1);
+      expect(publish(Message<String>(to: "sota", data: "Adios")), 1);
+      var list = await stream.take(2).toList();
+      expect(list[0].data, "Hola");
+      expect(list[1].data, "Adios");
+      expect(sub.closed, true);
+    });
+
     test("Async call", () async {
       subA.stream.listen((msg) {
         switch (msg.data) {
