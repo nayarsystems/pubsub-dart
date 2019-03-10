@@ -6,7 +6,9 @@ final _subscriptions = Map<String, Set<Subscriber>>();
 final _sticky = Map<String, Message>();
 var _atomic = 0;
 
-int publish(Message msg, {bool sticky = false, bool propagate = true}) {
+int publish<T>(String to, T data,
+    {String rpath, bool sticky = false, bool propagate = true}) {
+  var msg = Message<T>(to: to, resp: rpath, data: data);
   var touch = 0;
   if (sticky) {
     _sticky[msg.to] = msg._cloneSticky();
@@ -32,16 +34,15 @@ int publish(Message msg, {bool sticky = false, bool propagate = true}) {
   return touch;
 }
 
-Future<Object> call(String to, Object data,
+Future<T> call<T, P>(String to, P data,
     {String resp,
     bool sticky = false,
     bool propagate = false,
     Duration timeout}) async {
   var rpath = resp ?? '#resp.${++_atomic}';
-  var msg = Message(to: to, resp: rpath, data: data);
 
-  var stream = Subscriber([rpath]).stream;
-  publish(msg, sticky: sticky, propagate: propagate);
+  var stream = subscribe([rpath]).stream;
+  publish<P>(to, data, rpath: rpath, sticky: sticky, propagate: propagate);
   Message ret;
   if (timeout == null) {
     ret = await stream.first;
@@ -49,7 +50,7 @@ Future<Object> call(String to, Object data,
     ret = await stream.first.timeout(timeout);
   }
   if (ret.data is Exception) throw (ret.data);
-  return ret.data;
+  return ret.data as T;
 }
 
 Subscriber<T> subscribe<T>([List<String> topics]) {
@@ -176,7 +177,7 @@ class Message<T> {
   /// This message must have a non-null [resp] field.
   void answer(Object data) {
     if (resp != null) {
-      publish(Message(to: resp, data: data), propagate: false);
+      publish(resp, data, propagate: false);
     }
   }
 }
