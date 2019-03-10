@@ -4,149 +4,97 @@ import 'package:test/test.dart';
 
 main() {
   group('Subscriber test', () {
-    Subscriber subA;
-    Subscriber subB;
-    var messagesA = List<Message>();
-    var messagesB = List<Message>();
-
-    Future<dynamic> contextSwitch() {
-      return Future.delayed(const Duration(seconds: 0));
-    }
-
-    msgCbA(Message msg) {
-      messagesA.add(msg);
-    }
-
-    msgCbB(Message msg) {
-      messagesB.add(msg);
-    }
-
-    setUp(() {
-      subA = Subscriber();
-      subB = Subscriber();
-      messagesA.clear();
-      messagesB.clear();
-    });
-
-    tearDown(() {
-      subA.close();
-      subB.close();
-    });
-
     test("Single subscription test", () async {
-      subA.stream.listen(msgCbA);
-      subA.subscribeMany(["sota", "sota.*"]);
-      publish(Message(to: "sota", data: "Hello"));
-      await contextSwitch();
-      expect(messagesA.length, 1);
-      expect(messagesA[0].to, "sota");
-      expect(messagesA[0].data, "Hello");
-      publish(Message(to: "sota.caballo", data: "Hello"));
-      await contextSwitch();
-      expect(messagesA.length, 2);
-      expect(messagesA[1].to, "sota.caballo");
-      expect(messagesA[1].data, "Hello");
-      publish(Message(to: "caballo", data: "Hello"));
-      await contextSwitch();
-      expect(messagesA.length, 2);
+      var sub = subscribe(["sota", "sota.*"]);
+      expect(publish("sota", "Hello"), 1);
+      expect(publish("sota.caballo", "Bye"), 1);
+      expect(publish("caballo", "Hello"), 0);
+      sub.close();
+      var list = await sub.stream.toList();
+      expect(list.length, 2);
+      expect(list[0].to, "sota");
+      expect(list[0].data, "Hello");
+      expect(list[1].to, "sota.caballo");
+      expect(list[1].data, "Bye");
     });
 
     test("Multiple subscription test", () async {
-      subA.stream.listen(msgCbA);
-      subB.stream.listen(msgCbB);
-      subA.subscribeMany(["sota", "caballo"]);
-      subB.subscribeMany(["caballo", "rey"]);
-      expect(publish(Message(to: "rey", data: "Hello")), 1);
-      await contextSwitch();
-      expect(messagesA.length, 0);
-      expect(messagesB.length, 1);
-      expect(publish(Message(to: "sota", data: "Hello")), 1);
-      await contextSwitch();
-      expect(messagesA.length, 1);
-      expect(messagesB.length, 1);
-      expect(publish(Message(to: "caballo", data: "Hello")), 2);
-      await contextSwitch();
-      expect(messagesA.length, 2);
-      expect(messagesB.length, 2);
+      var sub1 = subscribe(["sota", "caballo"]);
+      var sub2 = subscribe(["caballo", "rey"]);
+      expect(publish("rey", "M1"), 1);
+      expect(publish("sota", "M2"), 1);
+      expect(publish("caballo", "M3"), 2);
+      sub1.close();
+      sub2.close();
+      var list1 = await sub1.stream.toList();
+      var list2 = await sub2.stream.toList();
+      expect(list1.length, 2);
+      expect(list1[0].to, "sota");
+      expect(list1[0].data, "M2");
+      expect(list1[1].to, "caballo");
+      expect(list1[1].data, "M3");
+      expect(list2.length, 2);
+      expect(list2[0].to, "rey");
+      expect(list2[0].data, "M1");
+      expect(list2[1].to, "caballo");
+      expect(list2[1].data, "M3");
     });
 
     test("Unsubscribe test", () async {
-      subA.stream.listen(msgCbA);
-      expect(subA.subscribe("sota"), true);
-      expect(publish(Message(to: "sota", data: "Hello")), 1);
-      await contextSwitch();
-      expect(messagesA.length, 1);
-      expect(subA.unsubscribe("sota"), true);
-      expect(publish(Message(to: "sota", data: "Hello")), 0);
-      await contextSwitch();
-      expect(messagesA.length, 1);
+      var sub = subscribe(["sota"]);
+      expect(publish("sota", "Hello"), 1);
+      expect(sub.unsubscribe("sota"), true);
+      expect(publish("sota", "Hello"), 0);
+      await sub.stream.take(1).toList();
     });
 
     test("Unsubscribe all test", () async {
-      subA.stream.listen(msgCbA);
-      expect(subA.subscribe("sota"), true);
-      expect(subA.subscribe("caballo"), true);
-      expect(publish(Message(to: "sota", data: "Hello")), 1);
-      expect(publish(Message(to: "caballo", data: "Hello")), 1);
-      await contextSwitch();
-      expect(messagesA.length, 2);
-      subA.unsubscribeAll();
-      expect(publish(Message(to: "sota", data: "Hello")), 0);
-      expect(publish(Message(to: "caballo", data: "Hello")), 0);
-      await contextSwitch();
-      expect(messagesA.length, 2);
+      var sub = subscribe(["sota", "caballo"]);
+      expect(publish("sota", "Hello"), 1);
+      expect(publish("caballo", "Hello"), 1);
+      sub.unsubscribeAll();
+      expect(publish("sota", "Hello"), 0);
+      expect(publish("caballo", "Hello"), 0);
+      sub.close();
+      await sub.stream.take(10).toList();
     });
 
     test("Parents propagate test", () async {
-      subA.stream.listen(msgCbA);
-      subB.stream.listen(msgCbB);
-      expect(subA.subscribe("sota.*"), true);
-      expect(subB.subscribe("sota.caballo"), true);
-      expect(
-          publish(Message(to: "sota.caballo", data: "Hello"), propagate: false),
-          1);
-      await contextSwitch();
-      expect(messagesA.length, 0);
-      expect(messagesB.length, 1);
-      expect(publish(Message(to: "sota.caballo", data: "Hello")), 2);
-      await contextSwitch();
-      expect(messagesA.length, 1);
-      expect(messagesB.length, 2);
+      var sub1 = subscribe(["sota.*"]);
+      var sub2 = subscribe(["sota.caballo"]);
+      expect(publish("sota.caballo", "Hello", propagate: false), 1);
+      expect(publish("sota.caballo", "Hello"), 2);
+      sub1.close();
+      sub2.close();
+      var list1 = await sub1.stream.toList();
+      var list2 = await sub2.stream.toList();
+      expect(list1.length, 1);
+      expect(list2.length, 2);
     });
 
     test("Sticky messages test", () async {
-      subA.stream.listen(msgCbA);
-      publish(Message(to: "__sticky__", data: "Hello"), sticky: true);
-      subA.subscribe("__sticky__");
-      await contextSwitch();
-      expect(messagesA.length, 1);
-      expect(messagesA[0].sticky, true);
-    });
-
-    test("Subscriber stream", () async {
-      var sub = Subscriber(["sota"]);
-      var stream = sub.stream;
-      expect(publish(Message(to: "sota", data: 1)), 1);
-      expect(publish(Message(to: "sota", data: 2)), 1);
-      var list = await stream.take(2).toList();
-      expect(list[0].data, 1);
-      expect(list[1].data, 2);
-      expect(sub.closed, true);
+      publish("__sticky__", "Hello", sticky: true);
+      var sub = subscribe(["__sticky__"]);
+      sub.close();
+      var list = await sub.stream.toList();
+      expect(list.length, 1);
+      expect(list[0].sticky, true);
     });
 
     test("Subscribe using generics", () async {
       var sub = subscribe<String>(["sota"]);
-      var stream = sub.stream;
-      expect(publish(Message<String>(to: "sota", data: "Hola")), 1);
-      expect(publish(Message<String>(to: "sota", data: "Adios")), 1);
-      var list = await stream.take(2).toList();
+      expect(publish("sota", "Hola"), 1);
+      expect(publish("sota", "Adios"), 1);
+      sub.close();
+      var list = await sub.stream.toList();
+      expect(list.length, 2);
       expect(list[0].data, "Hola");
       expect(list[1].data, "Adios");
-      expect(sub.closed, true);
     });
 
     test("Async call", () async {
-      subA.stream.listen((msg) {
+      var stream = subscribe<int>(["say.hello"]).stream;
+      var ss = stream.listen((msg) {
         switch (msg.data) {
           case 1:
             msg.answer("Hello");
@@ -157,7 +105,6 @@ main() {
         }
       });
 
-      subA.subscribe("say.hello");
       expect(await call("say.hello", 1), "Hello");
       try {
         await call("say.hello", 2);
@@ -172,6 +119,7 @@ main() {
         expect(e is TimeoutException, true,
             reason: "Expected TimeoutException");
       }
+      await ss.cancel();
     });
   });
 }
