@@ -45,7 +45,8 @@ main() {
       expect(publish("sota", "Hello"), 1);
       expect(sub.unsubscribe("sota"), true);
       expect(publish("sota", "Hello"), 0);
-      await sub.stream.take(1).toList();
+      sub.close();
+      await sub.stream.toList();
     });
 
     test("Unsubscribe all test", () async {
@@ -56,7 +57,7 @@ main() {
       expect(publish("sota", "Hello"), 0);
       expect(publish("caballo", "Hello"), 0);
       sub.close();
-      await sub.stream.take(10).toList();
+      await sub.stream.toList();
     });
 
     test("Parents propagate test", () async {
@@ -86,10 +87,10 @@ main() {
       expect(publish("sota", "Hola"), 1);
       expect(publish("sota", "Adios"), 1);
       sub.close();
-      var list = await sub.stream.toList();
+      var list = await sub.streamData.toList();
       expect(list.length, 2);
-      expect(list[0].data, "Hola");
-      expect(list[1].data, "Adios");
+      expect(list[0], "Hola");
+      expect(list[1], "Adios");
     });
 
     test("Async call", () async {

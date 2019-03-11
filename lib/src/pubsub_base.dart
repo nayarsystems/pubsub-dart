@@ -79,6 +79,10 @@ class Subscriber<T> {
     return _stc.stream;
   }
 
+  Stream<T> get streamData {
+    return stream.map((Message<T> msg) => msg.data);
+  }
+
   bool get closed {
     return _closed;
   }
