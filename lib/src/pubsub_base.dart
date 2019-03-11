@@ -34,21 +34,29 @@ int publish<T>(String to, T data,
   return touch;
 }
 
+Future<T> wait<T>(String topic, {bool sticky = true, Duration timeout}) async {
+  var stream = subscribe([topic]).stream;
+
+  if (timeout != null) {
+    stream = stream.timeout(timeout, onTimeout: (EventSink ev) {
+      ev.close();
+    });
+  }
+
+  await for (Message<T> msg in stream) {
+    if (!sticky && msg.sticky) continue;
+    return msg.data;
+  }
+  throw (TimeoutException("Timeout on wait function"));
+}
+
 Future<T> call<T, P>(String to, P data,
-    {String resp,
-    bool sticky = false,
-    bool propagate = false,
-    Duration timeout}) async {
+    {String resp, bool propagate = false, Duration timeout}) async {
   var rpath = resp ?? '#resp.${++_atomic}';
 
-  var stream = subscribe([rpath]).streamData;
-  publish<P>(to, data, rpath: rpath, sticky: sticky, propagate: propagate);
-  var ret;
-  if (timeout == null) {
-    ret = await stream.first;
-  } else {
-    ret = await stream.first.timeout(timeout);
-  }
+  var f = wait(rpath, sticky: false, timeout: timeout);
+  publish<P>(to, data, rpath: rpath, sticky: false, propagate: propagate);
+  var ret = await f;
   if (ret is Exception) throw (ret);
   return ret as T;
 }
