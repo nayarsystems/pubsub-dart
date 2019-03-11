@@ -41,16 +41,16 @@ Future<T> call<T, P>(String to, P data,
     Duration timeout}) async {
   var rpath = resp ?? '#resp.${++_atomic}';
 
-  var stream = subscribe([rpath]).stream;
+  var stream = subscribe([rpath]).streamData;
   publish<P>(to, data, rpath: rpath, sticky: sticky, propagate: propagate);
-  Message ret;
+  var ret;
   if (timeout == null) {
     ret = await stream.first;
   } else {
     ret = await stream.first.timeout(timeout);
   }
-  if (ret.data is Exception) throw (ret.data);
-  return ret.data as T;
+  if (ret is Exception) throw (ret);
+  return ret as T;
 }
 
 Subscriber<T> subscribe<T>([List<String> topics]) {
