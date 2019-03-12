@@ -192,4 +192,8 @@ class Message<T> {
       publish(resp, data, propagate: false);
     }
   }
+
+  String toString() {
+    return "Message(to:$to, data:$data${sticky != null ? ', sticky:$sticky' : ''}${resp != null ? ', resp:$resp' : ''})";
+  }
 }
