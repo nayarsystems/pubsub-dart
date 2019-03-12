@@ -1,6 +1,6 @@
 name: ps
 description: Lightweight Publish / Subscribe library. Supports sticky messages and streams.
-version: 1.0.12
+version: 1.0.13
 homepage: https://github.com/nayarsystems/pubsub-dart
 author: jaracil <pepe.aracil.gomez@gmail.com>
 
