@@ -51,11 +51,11 @@ Future<T> wait<T>(String topic, {bool sticky = true, Duration timeout}) async {
 }
 
 Future<T> call<T, P>(String to, P data,
-    {String resp, bool propagate = false, Duration timeout}) async {
+    {String resp, bool, Duration timeout}) async {
   var rpath = resp ?? '#resp.${++_atomic}';
 
   var f = wait(rpath, sticky: false, timeout: timeout);
-  publish<P>(to, data, rpath: rpath, sticky: false, propagate: propagate);
+  publish<P>(to, data, rpath: rpath, sticky: false);
   var ret = await f;
   if (ret is Exception) throw (ret);
   return ret as T;
