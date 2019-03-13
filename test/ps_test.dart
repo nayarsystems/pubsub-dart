@@ -18,6 +18,14 @@ main() {
       expect(list[1].data, "Bye");
     });
 
+    test("Hidden subscription test", () async {
+      var sub = subscribe(["sota"], hidden: true);
+      expect(publish("sota", "Hello"), 0);
+      sub.hidden = false;
+      expect(publish("sota", "Hello"), 1);
+      sub.close();
+    });
+
     test("Multiple subscription test", () async {
       var sub1 = subscribe(["sota", "caballo"]);
       var sub2 = subscribe(["caballo", "rey"]);

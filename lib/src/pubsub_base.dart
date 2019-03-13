@@ -25,7 +25,9 @@ int publish<T>(String to, T data,
     if (_subscriptions.containsKey(topic)) {
       for (var sub in _subscriptions[topic]) {
         sub._send(msg);
-        touch++;
+        if (!sub.hidden) {
+          touch++;
+        }
       }
     }
     if (!propagate) break;
@@ -61,8 +63,8 @@ Future<T> call<T, P>(String to, P data,
   return ret as T;
 }
 
-Subscriber<T> subscribe<T>([List<String> topics]) {
-  return Subscriber<T>(topics);
+Subscriber<T> subscribe<T>(List<String> topics, {bool hidden = false}) {
+  return Subscriber<T>(topics, hidden: hidden);
 }
 
 typedef MsgCb = void Function(Message msg);
@@ -70,10 +72,12 @@ typedef MsgCb = void Function(Message msg);
 /// Subscriber can be subscribed to subscription paths
 class Subscriber<T> {
   bool _closed = false;
+  bool _hidden = false;
   StreamController<Message<T>> _stc;
   final _localSubs = Set<String>();
 
-  Subscriber([List<String> topics]) {
+  Subscriber(List<String> topics, {bool hidden = false}) {
+    _hidden = hidden;
     _stc = StreamController();
     _stc.onCancel = () {
       close();
@@ -89,6 +93,14 @@ class Subscriber<T> {
 
   Stream<T> get streamData {
     return stream.map((Message<T> msg) => msg.data);
+  }
+
+  bool get hidden {
+    return _hidden;
+  }
+
+  void set hidden(bool hid) {
+    _hidden = hid;
   }
 
   bool get closed {
