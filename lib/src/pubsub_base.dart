@@ -174,7 +174,7 @@ class Message {
   final String resp;
 
   /// Creation time
-  final DateTime creation;
+  final int creation;
 
   /// Message data.
   final dynamic data;
@@ -184,18 +184,43 @@ class Message {
   /// You can check if a message is recent or old by looking at the state of this flag.
   final bool sticky;
 
-  Message._full({this.to, this.resp, this.data, this.sticky})
-      : creation = DateTime.now();
+  static Message fromMap(Map<String, dynamic> m) {
+    return Message._full(
+      to: m['to'],
+      resp: m['resp'],
+      data: m['data'],
+      sticky: m['sticky'] ?? false,
+      creation: m['creation'] ?? DateTime.now().millisecondsSinceEpoch,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'to': to,
+      'resp': resp,
+      'data': data,
+      'sticky': sticky,
+      'creation': creation,
+    };
+  }
+
+  Message._full({this.to, this.resp, this.data, this.sticky, this.creation});
 
   /// Constructs a new [Message] instance.
   /// [to] is the target topic.
   /// [data] is the message data.
   /// [resp] is the optional response topic.
   Message({@required String to, @required dynamic data, String resp})
-      : this._full(to: to, resp: resp, data: data, sticky: false);
+      : this._full(
+            to: to,
+            resp: resp,
+            data: data,
+            sticky: false,
+            creation: DateTime.now().millisecondsSinceEpoch);
 
   Message _cloneSticky() {
-    return Message._full(to: to, resp: resp, data: data, sticky: true);
+    return Message._full(
+        to: to, resp: resp, data: data, sticky: true, creation: creation);
   }
 
   /// create and publish a [Message] in response to this one.
