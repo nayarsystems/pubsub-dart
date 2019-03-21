@@ -6,9 +6,9 @@ final _subscriptions = Map<String, Set<Subscriber>>();
 final _sticky = Map<String, Message>();
 var _atomic = 0;
 
-int publish<T>(String to, T data,
+int publish(String to, dynamic data,
     {String rpath, bool sticky = false, bool propagate = true}) {
-  var msg = Message<T>(to: to, resp: rpath, data: data);
+  var msg = Message(to: to, resp: rpath, data: data);
   var touch = 0;
   if (sticky) {
     _sticky[msg.to] = msg._cloneSticky();
@@ -36,7 +36,8 @@ int publish<T>(String to, T data,
   return touch;
 }
 
-Future<T> wait<T>(String topic, {bool sticky = true, Duration timeout}) async {
+Future<dynamic> wait(String topic,
+    {bool sticky = true, Duration timeout}) async {
   var stream = subscribe([topic]).stream;
 
   if (timeout != null) {
@@ -45,35 +46,35 @@ Future<T> wait<T>(String topic, {bool sticky = true, Duration timeout}) async {
     });
   }
 
-  await for (Message<T> msg in stream) {
+  await for (Message msg in stream) {
     if (!sticky && msg.sticky) continue;
     return msg.data;
   }
   throw (TimeoutException("Timeout on wait function"));
 }
 
-Future<T> call<T, P>(String to, P data,
-    {String resp, bool, Duration timeout}) async {
+Future<dynamic> call(String to, dynamic data,
+    {String resp, Duration timeout}) async {
   var rpath = resp ?? '#resp.${++_atomic}';
 
   var f = wait(rpath, sticky: false, timeout: timeout);
-  publish<P>(to, data, rpath: rpath, sticky: false);
+  publish(to, data, rpath: rpath, sticky: false);
   var ret = await f;
   if (ret is Exception) throw (ret);
-  return ret as T;
+  return ret;
 }
 
-Subscriber<T> subscribe<T>(List<String> topics, {bool hidden = false}) {
-  return Subscriber<T>(topics, hidden: hidden);
+Subscriber subscribe(List<String> topics, {bool hidden = false}) {
+  return Subscriber(topics, hidden: hidden);
 }
 
 typedef MsgCb = void Function(Message msg);
 
 /// Subscriber can be subscribed to subscription paths
-class Subscriber<T> {
+class Subscriber {
   bool _closed = false;
   bool _hidden = false;
-  StreamController<Message<T>> _stc;
+  StreamController<Message> _stc;
   final _localSubs = Set<String>();
 
   Subscriber(List<String> topics, {bool hidden = false}) {
@@ -87,12 +88,12 @@ class Subscriber<T> {
     }
   }
 
-  Stream<Message<T>> get stream {
+  Stream<Message> get stream {
     return _stc.stream;
   }
 
-  Stream<T> get streamData {
-    return stream.map((Message<T> msg) => msg.data);
+  Stream get streamData {
+    return stream.map((Message msg) => msg.data);
   }
 
   bool get hidden {
@@ -165,7 +166,7 @@ class Subscriber<T> {
 }
 
 /// Represents a message that can be published in a topic.
-class Message<T> {
+class Message {
   ///  Target topic.
   final String to;
 
@@ -176,7 +177,7 @@ class Message<T> {
   final DateTime creation;
 
   /// Message data.
-  final T data;
+  final dynamic data;
 
   /// Sticky messages remain in memory and are delivered when a subscriber
   /// subscribes to the topic to which the sticky message was previously delivered.
@@ -190,11 +191,11 @@ class Message<T> {
   /// [to] is the target topic.
   /// [data] is the message data.
   /// [resp] is the optional response topic.
-  Message({@required String to, @required T data, String resp})
+  Message({@required String to, @required dynamic data, String resp})
       : this._full(to: to, resp: resp, data: data, sticky: false);
 
-  Message<T> _cloneSticky() {
-    return Message<T>._full(to: to, resp: resp, data: data, sticky: true);
+  Message _cloneSticky() {
+    return Message._full(to: to, resp: resp, data: data, sticky: true);
   }
 
   /// create and publish a [Message] in response to this one.

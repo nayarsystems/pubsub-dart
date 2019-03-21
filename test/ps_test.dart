@@ -90,19 +90,8 @@ main() {
       expect(list[0].sticky, true);
     });
 
-    test("Subscribe using generics", () async {
-      var sub = subscribe<String>(["sota"]);
-      expect(publish("sota", "Hola"), 1);
-      expect(publish("sota", "Adios"), 1);
-      sub.close();
-      var list = await sub.streamData.toList();
-      expect(list.length, 2);
-      expect(list[0], "Hola");
-      expect(list[1], "Adios");
-    });
-
     test("Async call", () async {
-      var stream = subscribe<int>(["say.hello"]).stream;
+      var stream = subscribe(["say.hello"]).stream;
       var ss = stream.listen((msg) {
         switch (msg.data) {
           case 1:
