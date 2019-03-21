@@ -20,7 +20,7 @@ int publish(String to, dynamic data,
     if (first) {
       first = false;
     } else {
-      topic += ".*";
+      topic += '.*';
     }
     if (_subscriptions.containsKey(topic)) {
       for (var sub in _subscriptions[topic]) {
@@ -50,7 +50,7 @@ Future<dynamic> wait(String topic,
     if (!sticky && msg.sticky) continue;
     return msg.data;
   }
-  throw (TimeoutException("Timeout on wait function"));
+  throw (TimeoutException('Timeout on wait function'));
 }
 
 Future<dynamic> call(String to, dynamic data,
@@ -100,7 +100,7 @@ class Subscriber {
     return _hidden;
   }
 
-  void set hidden(bool hid) {
+  set hidden(bool hid) {
     _hidden = hid;
   }
 
@@ -117,7 +117,7 @@ class Subscriber {
   }
 
   bool subscribe(String topic) {
-    if (_closed) throw Exception("Subscribe on closed Subscriber");
+    if (_closed) throw Exception('Subscribe on closed Subscriber');
     var ret =
         _subscriptions.putIfAbsent(topic, () => Set<Subscriber>()).add(this);
     _localSubs.add(topic);
@@ -146,7 +146,7 @@ class Subscriber {
   }
 
   void unsubscribeMany(List<String> topics) {
-    if (_closed) throw Exception("Unsubscribe on closed Subscriber");
+    if (_closed) throw Exception('Unsubscribe on closed Subscriber');
     for (var topic in topics) {
       unsubscribe(topic);
     }
@@ -184,7 +184,9 @@ class Message {
   /// You can check if a message is recent or old by looking at the state of this flag.
   final bool sticky;
 
-  static Message fromMap(Map<String, dynamic> m) {
+  static Message fromMap(dynamic m) {
+    if (m is Message) return m;
+
     return Message._full(
       to: m['to'],
       resp: m['resp'],
@@ -232,6 +234,6 @@ class Message {
   }
 
   String toString() {
-    return "Message(to:$to, data:$data${sticky != null ? ', sticky:$sticky' : ''}${resp != null ? ', resp:$resp' : ''})";
+    return 'Message(to:$to, data:$data${sticky != null ? ", sticky:$sticky" : ""}${resp != null ? ", resp:$resp" : ""})';
   }
 }
