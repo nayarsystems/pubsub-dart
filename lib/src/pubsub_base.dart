@@ -228,7 +228,7 @@ class Message {
   /// create and publish a [Message] in response to this one.
   /// This message must have a non-null [resp] field.
   void answer(Object data) {
-    if (resp != null) {
+    if (resp != null && resp != '') {
       publish(resp, data, propagate: false);
     }
   }
