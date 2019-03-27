@@ -30,9 +30,9 @@ int publish(String to, dynamic data,
   return touch;
 }
 
-Future<dynamic> wait(String topic,
+Future<dynamic> wait(List<String> topics,
     {bool sticky = true, Duration timeout}) async {
-  var stream = subscribe([topic]).stream;
+  var stream = subscribe(topics).stream;
 
   if (timeout != null) {
     stream = stream.timeout(timeout, onTimeout: (EventSink ev) {
@@ -51,7 +51,7 @@ Future<dynamic> call(String to, dynamic data,
     {String resp, Duration timeout}) async {
   var rpath = resp ?? '#resp.${++_atomic}';
 
-  var f = wait(rpath, sticky: false, timeout: timeout);
+  var f = wait([rpath], sticky: false, timeout: timeout);
   publish(to, data, rpath: rpath, sticky: false);
   var ret = await f;
   if (ret is Exception) throw (ret);
