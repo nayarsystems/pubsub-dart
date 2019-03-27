@@ -229,7 +229,7 @@ class Message {
   /// This message must have a non-null [resp] field.
   void answer(Object data) {
     if (resp != null && resp != '') {
-      publish(resp, data, propagate: false);
+      publish(resp, data);
     }
   }
 
