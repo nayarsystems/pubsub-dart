@@ -14,14 +14,8 @@ int publish(String to, dynamic data,
     _sticky[msg.to] = msg._cloneSticky();
   }
   var chunks = msg.to.split('.');
-  var first = true;
   while (chunks.isNotEmpty) {
     var topic = chunks.join('.');
-    if (first) {
-      first = false;
-    } else {
-      topic += '.*';
-    }
     if (_subscriptions.containsKey(topic)) {
       for (var sub in _subscriptions[topic]) {
         sub._send(msg);

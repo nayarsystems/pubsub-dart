@@ -80,7 +80,7 @@ main() {
     });
 
     test('Parents propagate test', () async {
-      var sub1 = subscribe(['sota.*']);
+      var sub1 = subscribe(['sota']);
       var sub2 = subscribe(['sota.caballo']);
       expect(publish('sota.caballo', 'Hello', propagate: false), 1);
       expect(publish('sota.caballo', 'Hello'), 2);
