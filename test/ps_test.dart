@@ -6,9 +6,9 @@ main() {
   group('Subscriber test', () {
     test('Single subscription test', () async {
       var sub = subscribe(['sota', 'sota.*']);
-      expect(publish('sota', 'Hello'), 1);
-      expect(publish('sota.caballo', 'Bye'), 1);
-      expect(publish('caballo', 'Hello'), 0);
+      expect(publish('sota', data: 'Hello'), 1);
+      expect(publish('sota.caballo', data: 'Bye'), 1);
+      expect(publish('caballo', data: 'Hello'), 0);
       sub.close();
       var list = await sub.stream.toList();
       expect(list.length, 2);
@@ -21,9 +21,9 @@ main() {
     test('Multiple subscription test', () async {
       var sub1 = subscribe(['sota', 'caballo']);
       var sub2 = subscribe(['caballo', 'rey']);
-      expect(publish('rey', 'M1'), 1);
-      expect(publish('sota', 'M2'), 1);
-      expect(publish('caballo', 'M3'), 2);
+      expect(publish('rey', data: 'M1'), 1);
+      expect(publish('sota', data: 'M2'), 1);
+      expect(publish('caballo', data: 'M3'), 2);
       sub1.close();
       sub2.close();
       var list1 = await sub1.stream.toList();
@@ -42,36 +42,36 @@ main() {
 
     test('Unsubscribe test', () async {
       var sub = subscribe(['sota']);
-      expect(publish('sota', 'Hello'), 1);
+      expect(publish('sota', data: 'Hello'), 1);
       expect(sub.unsubscribe('sota'), true);
-      expect(publish('sota', 'Hello'), 0);
+      expect(publish('sota', data: 'Hello'), 0);
       sub.close();
       await sub.stream.toList();
     });
 
     test('Unsubscribe all test', () async {
       var sub = subscribe(['sota', 'caballo']);
-      expect(publish('sota', 'Hello'), 1);
-      expect(publish('caballo', 'Hello'), 1);
+      expect(publish('sota', data: 'Hello'), 1);
+      expect(publish('caballo', data: 'Hello'), 1);
       sub.unsubscribeAll();
-      expect(publish('sota', 'Hello'), 0);
-      expect(publish('caballo', 'Hello'), 0);
+      expect(publish('sota', data: 'Hello'), 0);
+      expect(publish('caballo', data: 'Hello'), 0);
       sub.close();
       await sub.stream.toList();
     });
     test('Hidden subscription test', () async {
       var sub = subscribe(['sota'], hidden: true);
-      expect(publish('sota', 'Hello'), 0);
+      expect(publish('sota', data: 'Hello'), 0);
       sub.hidden = false;
-      expect(publish('sota', 'Hello'), 1);
+      expect(publish('sota', data: 'Hello'), 1);
       sub.close();
     });
 
     test('streamData test', () async {
       var sub = subscribe(['sota']);
       var std = sub.streamData.cast<int>();
-      expect(publish('sota', 1), 1);
-      expect(publish('sota', 2), 1);
+      expect(publish('sota', data: 1), 1);
+      expect(publish('sota', data: 2), 1);
       sub.close();
       var list = await std.toList();
       expect(list.length, 2);
@@ -82,8 +82,8 @@ main() {
     test('Parents propagate test', () async {
       var sub1 = subscribe(['sota']);
       var sub2 = subscribe(['sota.caballo']);
-      expect(publish('sota.caballo', 'Hello', propagate: false), 1);
-      expect(publish('sota.caballo', 'Hello'), 2);
+      expect(publish('sota.caballo', data: 'Hello', propagate: false), 1);
+      expect(publish('sota.caballo', data: 'Hello'), 2);
       sub1.close();
       sub2.close();
       var list1 = await sub1.stream.toList();
@@ -93,7 +93,7 @@ main() {
     });
 
     test('Sticky messages test', () async {
-      publish('__sticky__', 'Hello', sticky: true);
+      publish('__sticky__', data: 'Hello', sticky: true);
       var sub = subscribe(['__sticky__']);
       sub.close();
       var list = await sub.stream.toList();
@@ -128,21 +128,31 @@ main() {
         }
       });
 
-      expect(await call('say.hello', 1), 'Hello');
+      expect(await call('say.hello', data: 1), 'Hello');
       try {
-        await call('say.hello', 2);
+        await call('say.hello', data: 2);
         fail('Exception expected');
       } catch (e) {
         expect(e.toString(), contains('Boom!!'));
       }
       try {
-        await call('say.bay', null, timeout: Duration(milliseconds: 5));
+        await call('say.bay', timeout: Duration(milliseconds: 5));
         fail('Timeout exception expected');
       } catch (e) {
         expect(e is TimeoutException, true,
             reason: 'Expected TimeoutException');
       }
       await ss.cancel();
+    });
+
+    test('Data on publish is null when not specified', () async {
+      var sub = subscribe(['sota']);
+      publish('sota');
+      sub.close();
+      var list = await sub.stream.toList();
+      expect(list.length, 1);
+      expect(list[0].to, 'sota');
+      expect(list[0].data, null);
     });
   });
 }

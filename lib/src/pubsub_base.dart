@@ -6,8 +6,8 @@ final _subscriptions = Map<String, Set<Subscriber>>();
 final _sticky = Map<String, Message>();
 var _atomic = 0;
 
-int publish(String to, dynamic data,
-    {String rpath, bool sticky = false, bool propagate = true}) {
+int publish(String to,
+    {dynamic data, String rpath, bool sticky = false, bool propagate = true}) {
   var msg = Message(to: to, resp: rpath, data: data);
   var touch = 0;
   if (sticky) {
@@ -47,12 +47,12 @@ Future<dynamic> wait(List<String> topics,
   throw (TimeoutException('Timeout on wait function'));
 }
 
-Future<dynamic> call(String to, dynamic data,
-    {String resp, Duration timeout}) async {
+Future<dynamic> call(String to,
+    {dynamic data, String resp, Duration timeout}) async {
   var rpath = resp ?? '#resp.${++_atomic}';
 
   var f = wait([rpath], sticky: false, timeout: timeout);
-  publish(to, data, rpath: rpath, sticky: false);
+  publish(to, data: data, rpath: rpath, sticky: false);
   var ret = await f;
   if (ret is Exception) throw (ret);
   return ret;
@@ -223,7 +223,7 @@ class Message {
   /// This message must have a non-null [resp] field.
   void answer(Object data) {
     if (resp != null && resp != '') {
-      publish(resp, data);
+      publish(resp, data: data);
     }
   }
 
