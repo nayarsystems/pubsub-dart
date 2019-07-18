@@ -125,6 +125,9 @@ main() {
           case 2:
             msg.answer(Exception('Boom!!'));
             break;
+          case 3:
+            msg.answer(StateError('Crash!!'));
+            break;
         }
       });
 
@@ -134,6 +137,12 @@ main() {
         fail('Exception expected');
       } catch (e) {
         expect(e.toString(), contains('Boom!!'));
+      }
+      try {
+        await call('say.hello', data: 3);
+        fail('Error expected');
+      } catch (e) {
+        expect(e.toString(), contains('Crash!!'));
       }
       try {
         await call('say.bay', timeout: Duration(milliseconds: 5));

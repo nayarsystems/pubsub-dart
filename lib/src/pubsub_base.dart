@@ -54,7 +54,7 @@ Future<dynamic> call(String to,
   var f = wait([rpath], sticky: false, timeout: timeout);
   publish(to, data: data, rpath: rpath, sticky: false);
   var ret = await f;
-  if (ret is Exception) throw (ret);
+  if (ret is Exception || ret is Error) throw (ret);
   return ret;
 }
 
