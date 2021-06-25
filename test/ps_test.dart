@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:ps/ps.dart';
 import 'package:test/test.dart';
 
+class MyException implements Exception {}
+
 void main() {
   group('Subscriber test', () {
     test('Single subscription test', () async {
@@ -162,6 +164,28 @@ void main() {
       expect(list.length, 1);
       expect(list[0].to, 'sota');
       expect(list[0].data, null);
+    });
+
+    test('StackTrace is kept on call', () async {
+      var sub = subscribe(['sota']);
+
+      sub.stream.listen((msg) {
+        try {
+          throw MyException();
+        } catch (err, stack) {
+          msg.answer(StackException(err, stack));
+        }
+      });
+
+      try {
+        await call('sota');
+      } catch (err, stack) {
+        expect(err, isA<MyException>());
+        expect(stack, isNotNull);
+        expect(stack.toString(), contains('pubsub-dart/test/ps_test.dart:'));
+      }
+
+      sub.close();
     });
   });
 }

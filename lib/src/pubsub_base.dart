@@ -6,6 +6,14 @@ final _subscriptions = <String, Set<Subscriber>>{};
 final _sticky = <String, Message>{};
 var _atomic = 0;
 
+/// [Exception] that embeds [StackTrace] so it's not lost on [call] function
+class StackException implements Exception {
+  dynamic exception;
+  StackTrace stackTrace;
+
+  StackException(this.exception, this.stackTrace);
+}
+
 int publish(String to,
     {dynamic data, String rpath, bool sticky = false, bool propagate = true}) {
   var msg = Message(to: to, resp: rpath, data: data);
@@ -54,7 +62,13 @@ Future<dynamic> call(String to,
   var f = wait([rpath], sticky: false, timeout: timeout);
   publish(to, data: data, rpath: rpath, sticky: false);
   var ret = await f;
-  if (ret is Exception || ret is Error) throw (ret);
+  if (ret is Exception || ret is Error) {
+    if (ret is StackException) {
+      throw await Future.error(ret.exception, ret.stackTrace);
+    } else {
+      throw ret;
+    }
+  }
   return ret;
 }
 
@@ -211,6 +225,7 @@ class Message {
 
   /// create and publish a [Message] in response to this one.
   /// This message must have a non-null [resp] field.
+  /// If passing an [Exception]/[Error] use [StackException] to keep the [StackTrace] on [call]
   void answer(Object data) {
     if (resp != null && resp != '') {
       publish(resp, data: data);
