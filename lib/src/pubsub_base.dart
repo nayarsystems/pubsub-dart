@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:meta/meta.dart';
 
-final _subscriptions = Map<String, Set<Subscriber>>();
-final _sticky = Map<String, Message>();
+final _subscriptions = <String, Set<Subscriber>>{};
+final _sticky = <String, Message>{};
 var _atomic = 0;
 
 int publish(String to,
@@ -67,12 +67,11 @@ typedef MsgCb = void Function(Message msg);
 /// Subscriber can be subscribed to subscription paths
 class Subscriber {
   bool _closed = false;
-  bool _hidden = false;
+  bool hidden = false;
   StreamController<Message> _stc;
-  final _localSubs = Set<String>();
+  final _localSubs = <String>{};
 
-  Subscriber(List<String> topics, {bool hidden = false}) {
-    _hidden = hidden;
+  Subscriber(List<String> topics, {this.hidden = false}) {
     _stc = StreamController();
     _stc.onCancel = () {
       close();
@@ -90,14 +89,6 @@ class Subscriber {
     return stream.map((Message msg) => msg.data);
   }
 
-  bool get hidden {
-    return _hidden;
-  }
-
-  set hidden(bool hid) {
-    _hidden = hid;
-  }
-
   bool get closed {
     return _closed;
   }
@@ -112,8 +103,7 @@ class Subscriber {
 
   bool subscribe(String topic) {
     if (_closed) throw Exception('Subscribe on closed Subscriber');
-    var ret =
-        _subscriptions.putIfAbsent(topic, () => Set<Subscriber>()).add(this);
+    var ret = _subscriptions.putIfAbsent(topic, () => <Subscriber>{}).add(this);
     _localSubs.add(topic);
     if (_sticky.containsKey(topic)) {
       _send(_sticky[topic]);
@@ -227,6 +217,7 @@ class Message {
     }
   }
 
+  @override
   String toString() {
     return 'Message(to:$to, data:$data${sticky != null ? ", sticky:$sticky" : ""}${resp != null ? ", resp:$resp" : ""})';
   }

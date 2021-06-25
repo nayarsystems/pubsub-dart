@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:ps/ps.dart';
 import 'package:test/test.dart';
 
-main() {
+void main() {
   group('Subscriber test', () {
     test('Single subscription test', () async {
       var sub = subscribe(['sota', 'sota.*']);
