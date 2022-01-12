@@ -241,7 +241,7 @@ class Message {
   /// create and publish a [Message] in response to this one.
   /// This message must have a non-null [resp] field.
   /// If passing an [Exception]/[Error] use [StackException] to keep the [StackTrace] on [call]
-  void answer(Object data) {
+  void answer(dynamic data) {
     var r = resp;
     if (r != null && r != '') {
       publish(r, data: data);
