@@ -15,7 +15,7 @@ class StackException implements Exception {
 }
 
 int publish(String to,
-    {dynamic data, String rpath, bool sticky = false, bool propagate = true}) {
+    {dynamic data, String? rpath, bool sticky = false, bool propagate = true}) {
   var msg = Message(to: to, resp: rpath, data: data);
   var touch = 0;
   if (sticky) {
@@ -25,10 +25,14 @@ int publish(String to,
   while (chunks.isNotEmpty) {
     var topic = chunks.join('.');
     if (_subscriptions.containsKey(topic)) {
-      for (var sub in _subscriptions[topic]) {
-        sub._send(msg);
-        if (!sub.hidden) {
-          touch++;
+      var subsTopic = _subscriptions[topic];
+
+      if (subsTopic != null) {
+        for (var sub in subsTopic) {
+          sub._send(msg);
+          if (!sub.hidden) {
+            touch++;
+          }
         }
       }
     }
@@ -39,7 +43,7 @@ int publish(String to,
 }
 
 Future<dynamic> wait(List<String> topics,
-    {bool sticky = true, Duration timeout}) async {
+    {bool sticky = true, Duration? timeout}) async {
   var stream = subscribe(topics).stream;
 
   if (timeout != null) {
@@ -56,7 +60,7 @@ Future<dynamic> wait(List<String> topics,
 }
 
 Future<dynamic> call(String to,
-    {dynamic data, String resp, Duration timeout}) async {
+    {dynamic data, String? resp, Duration? timeout}) async {
   var rpath = resp ?? '#resp.${++_atomic}';
 
   var f = wait([rpath], sticky: false, timeout: timeout);
@@ -82,7 +86,7 @@ typedef MsgCb = void Function(Message msg);
 class Subscriber {
   bool _closed = false;
   bool hidden = false;
-  StreamController<Message> _stc;
+  late StreamController<Message> _stc;
   final _localSubs = <String>{};
 
   Subscriber(List<String> topics, {this.hidden = false}) {
@@ -90,9 +94,7 @@ class Subscriber {
     _stc.onCancel = () {
       close();
     };
-    if (topics != null) {
-      subscribeMany(topics);
-    }
+    subscribeMany(topics);
   }
 
   Stream<Message> get stream {
@@ -111,7 +113,7 @@ class Subscriber {
     if (!_closed) {
       _closed = true;
       unsubscribeAll();
-      _stc?.close();
+      _stc.close();
     }
   }
 
@@ -120,7 +122,10 @@ class Subscriber {
     var ret = _subscriptions.putIfAbsent(topic, () => <Subscriber>{}).add(this);
     _localSubs.add(topic);
     if (_sticky.containsKey(topic)) {
-      _send(_sticky[topic]);
+      var stickyVal = _sticky[topic];
+      if (stickyVal != null) {
+        _send(stickyVal);
+      }
     }
     return ret;
   }
@@ -134,10 +139,15 @@ class Subscriber {
   bool unsubscribe(String topic) {
     var ret = false;
     if (_subscriptions.containsKey(topic)) {
-      ret = _subscriptions[topic].remove(this);
-      if (_subscriptions[topic].isEmpty) {
-        _subscriptions.remove(topic);
+      var sub = _subscriptions[topic];
+
+      if (sub != null) {
+        ret = sub.remove(this);
+        if (sub.isEmpty) {
+          _subscriptions.remove(topic);
+        }
       }
+
       _localSubs.remove(topic);
     }
     return ret;
@@ -157,7 +167,7 @@ class Subscriber {
   }
 
   void _send(Message msg) {
-    if (!_closed && _stc != null) {
+    if (!_closed) {
       _stc.add((msg));
     }
   }
@@ -169,7 +179,7 @@ class Message {
   final String to;
 
   /// Response topic (Optional).
-  final String resp;
+  final String? resp;
 
   /// Creation time
   final int creation;
@@ -204,13 +214,18 @@ class Message {
     };
   }
 
-  Message._full({this.to, this.resp, this.data, this.sticky, this.creation});
+  Message._full(
+      {required this.to,
+      this.resp,
+      required this.data,
+      required this.sticky,
+      required this.creation});
 
   /// Constructs a new [Message] instance.
   /// [to] is the target topic.
   /// [data] is the message data.
   /// [resp] is the optional response topic.
-  Message({@required String to, @required dynamic data, String resp})
+  Message({required String to, @required dynamic data, String? resp})
       : this._full(
             to: to,
             resp: resp,
@@ -227,13 +242,14 @@ class Message {
   /// This message must have a non-null [resp] field.
   /// If passing an [Exception]/[Error] use [StackException] to keep the [StackTrace] on [call]
   void answer(Object data) {
-    if (resp != null && resp != '') {
-      publish(resp, data: data);
+    var r = resp;
+    if (r != null && r != '') {
+      publish(r, data: data);
     }
   }
 
   @override
   String toString() {
-    return 'Message(to:$to, data:$data${sticky != null ? ", sticky:$sticky" : ""}${resp != null ? ", resp:$resp" : ""})';
+    return 'Message(to:$to, data:$data, sticky:$sticky${resp != null ? ", resp:$resp" : ""})';
   }
 }
