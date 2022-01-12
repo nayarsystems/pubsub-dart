@@ -13,3 +13,7 @@
 ## 4.0.0
 
 - Null-safety
+
+## 4.0.1
+
+- Accept dynamic on Message.anwser()
